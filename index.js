@@ -199,7 +199,7 @@ RewireCall.prototype.use = function use (fn) {
  */
 RewireCall.prototype.body = function body (val) {
   if (Buffer.isBuffer(val)) {
-    this.set('Content-Length', val.length)
+    this.set('Content-Length', val.length.toString())
     val = new ReadableStreamBuffer(val)
   }
 
