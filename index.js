@@ -115,9 +115,10 @@ function RewireCall (rewire, req, method, url) {
     url = '/'
   }
 
-  this.app = req.app
+  this.req = req
   this.method = method
   this.header = {}
+  this.body(new Buffer(0))
 
   // TODO: remove / when joining and req.url is only /?
   this.url = path.join(rewire.baseUrl, url)
@@ -236,7 +237,7 @@ RewireCall.prototype.json = function body (val) {
  * @api private
  */
 RewireCall.prototype._promise = function _promise () {
-  var app = this.app
+  var app = this.req.app
 
   var options_ = {
     path: this.url,
@@ -251,6 +252,7 @@ RewireCall.prototype._promise = function _promise () {
   var backendResponse = new FakeResponse(options_)
   backendResponse.req = backendRequest
   backendRequest.res = backendResponse
+  backendRequest.connection = this.req
 
   return new Promise(function (resolve, reject) {
     backendResponse.on('finish', function () {
