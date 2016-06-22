@@ -58,7 +58,7 @@ function expressRewireMiddleware (url) {
     var options = {
       // TODO: remove / when joining and req.url is only /?
       path: path.join(baseUrl, req.url),
-      requestBody: req.socket
+      forwardRequest: req
     }
 
     var backendRequest = new FakeRequest(req, options)
