@@ -55,32 +55,8 @@ function expressRewireMiddleware (url) {
   return function expressRewireMiddleware_ (req, res, next) {
     var app = req.app
 
-    var options = {
-      // TODO: remove / when joining and req.url is only /?
-      path: path.join(baseUrl, req.url),
-      forwardRequest: req
-    }
-
-    var backendRequest = new FakeRequest(req, options)
-    var backendResponse = new FakeResponse(res, options)
-    backendResponse.req = backendRequest
-    backendRequest.res = backendResponse
-
-    backendResponse.on('prefinish', function () {
-      res.status(backendResponse.statusCode)
-      res.set(backendResponse._headers)
-      res.flushHeaders()
-
-      backendResponse.connection
-        .pipe(res.connection)
-    })
-
-    backendResponse.on('err', function (err) {
-      console.error(err)
-      res.sendStatus(500).end()
-    })
-
-    app.handle(backendRequest, backendResponse)
+    req.url = path.join(baseUrl, req.url)
+    app.handle(req, res)
   }
 }
 
@@ -256,6 +232,7 @@ RewireCall.prototype._promise = function _promise () {
 
   return new Promise(function (resolve, reject) {
     backendResponse.on('finish', function () {
+      backendResponse.headers = backendResponse._headers
       resolve(backendResponse)
     })
 
