@@ -228,7 +228,7 @@ RewireCall.prototype._promise = function _promise () {
   var backendResponse = new FakeResponse(options_)
   backendResponse.req = backendRequest
   backendRequest.res = backendResponse
-  backendRequest.connection = this.req
+  backendRequest.connection = this.req.connection
 
   return new Promise(function (resolve, reject) {
     backendResponse.on('finish', function () {
