@@ -9,6 +9,8 @@ var it = mocha.it
 
 var rewire = require('../index.js')
 
+var WritableStreamBuffer = require('../lib/writeable-stream-buffer')
+
 describe('Express-rewire', function () {
   var app
 
@@ -28,8 +30,9 @@ describe('Express-rewire', function () {
     })
 
     app.post('/test', function (req, res) {
-      var body = req.read(req.get('Content-Length'))
-      res.json({body: JSON.parse(body.toString())})
+      req.pipe(new WritableStreamBuffer(function (body) {
+        res.json({body: JSON.parse(body.toString())})
+      }))
     })
 
     app.post('/body-parsers', bodyParser.json())
@@ -139,14 +142,16 @@ describe('Express-rewire', function () {
   })
 
   it('should forward body with middleware', function (done) {
-    app.use('/rewire', rewire('/test').middleware())
+    app.use('/rewire', function (req, res, next) {
+      rewire('/test').middleware()(req, res, next)
+    })
 
     var expected = {
       body: { foo: 'bar' }
     }
 
     request(app)
-      .post('/body-parsers')
+      .post('/rewire')
       .send({foo: 'bar'})
       .expect(200)
       .expect('Content-Type', /json/)
@@ -156,5 +161,74 @@ describe('Express-rewire', function () {
         else done()
       })
   })
+
+  it('should forward body with middleware after body parsers', function (done) {
+    app.use('/rewire', bodyParser.json())
+    app.use('/rewire', function (req, res, next) {
+      rewire('/test').middleware()(req, res, next)
+    })
+
+    var expected = {
+      body: { foo: 'bar' }
+    }
+
+    request(app)
+      .post('/rewire')
+      .send({foo: 'bar'})
+      .expect(200)
+      .expect('Content-Type', /json/)
+      .expect(expected)
+      .end(function (err, res) {
+        if (err) done(err)
+        else done()
+      })
+  })
+
+  it('should forward body with middleware after body parsers through body parsers', function (done) {
+    app.use('/rewire', bodyParser.json())
+    app.use('/rewire', rewire('/body-parsers').middleware())
+
+    var expected = {
+      body: { foo: 'bar' }
+    }
+
+    request(app)
+      .post('/rewire')
+      .send({foo: 'bar'})
+      .expect(200)
+      .expect('Content-Type', /json/)
+      .expect(expected)
+      .end(function (err, res) {
+        if (err) done(err)
+        else done()
+      })
+  })
+
+  // it('should forward body with middleware after body parsers and http-proxy', function (done) {
+  //   app.use('/proxy', function(req, res) {
+  //     var proxy = httpProxy.createProxyServer({
+  //       target: 'http://localhost:8081',
+  //     });
+  //     console.log('foo')
+  //     proxy.web(req, res);
+  //   });
+  //   app.use('/rewire', bodyParser.json())
+  //   app.use('/rewire', rewire('/proxy').middleware())
+
+  //   var expected = {
+  //     body: { foo: 'bar' }
+  //   }
+
+  //   request(app)
+  //     .post('/rewire')
+  //     .send({foo: 'bar'})
+  //     .expect(200)
+  //     .expect('Content-Type', /json/)
+  //     .expect(expected)
+  //     .end(function (err, res) {
+  //       if (err) done(err)
+  //       else done()
+  //     })
+  // })
 })
 

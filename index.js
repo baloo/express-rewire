@@ -28,6 +28,8 @@ var path = require('path')
 var ReadableStreamBuffer = require('./lib/readable-stream-buffer')
 var FakeRequest = require('./lib/fake-request')
 var FakeResponse = require('./lib/fake-response')
+var objectAssign = require('./lib/object-assign')
+var serializers = require('./lib/serializer')
 
 /**
  * Check if `obj` is an object.
@@ -55,8 +57,32 @@ function expressRewireMiddleware (url) {
   return function expressRewireMiddleware_ (req, res, next) {
     var app = req.app
 
-    req.url = path.join(baseUrl, req.url)
-    app.handle(req, res)
+    if (req.body) {
+      // We got through body parser, we should reserialize
+      var contentType = req.get('Content-Type')
+      var serializer = serializers[contentType]
+      var body = new Buffer(serializer(req.body))
+
+      var options = {
+        path: path.join(baseUrl, req.url),
+        method: req.method,
+
+        headers: objectAssign({}, req.headers, {
+          'Content-Length': body.length.toString()
+        }),
+        requestBody: new ReadableStreamBuffer(body)
+      }
+
+      var proxyReq = new FakeRequest(options)
+      proxyReq.res = res
+      res.req = proxyReq
+      proxyReq.connection = req.connection
+
+      app.handle(proxyReq, res)
+    } else {
+      req.url = path.join(baseUrl, req.url)
+      app.handle(req, res)
+    }
   }
 }
 
