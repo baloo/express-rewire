@@ -1,6 +1,6 @@
 {
   "name": "express-rewire",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Rewire calls inside an express application",
   "main": "index.js",
   "scripts": {
